@@ -248,7 +248,7 @@ h2{
 }
 
 /* Окошко уведомления слева сверху */
-.notification-popup {
+.notification-popup-container {
   position: absolute;
   top: 0;
   left: 0;
@@ -267,6 +267,42 @@ h2{
   white-space: nowrap;
 }
 
+.notif-popup-container {
+  position: absolute;
+  top: 40px;
+  left: 10%;
+  color: #dbdbdb;
+  background-color: #333333e9;
+  padding: 15px;
+  border-radius: 20px;
+  border: 1px solid #5050506c;
+  min-width: 250px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.25s ease;
+  z-index: 1100;
+  box-shadow: 0px 0px 100px #434343de;
+  font-family: 'Unbound', sans-serif;
+}
+
+.notif-item {
+  padding: 10px;
+  border-bottom: 1px solid #444;
+  font-size: 14px;
+}
+.notif-item:last-child { border-bottom: none; }
+
+/* Твоя анимация колокольчика */
+.notific:hover {
+  animation: bell-swing 1.5s ease-in-out infinite;
+}
+
+.notif-popup-container.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
 .notification-popup.show {
   opacity: 1;
   visibility: visible;
@@ -292,6 +328,32 @@ h2{
   60% {
     transform: rotate(10deg);
   }
+}
+
+.tooltip-base {
+  user-select: none; 
+  z-index: 1000;
+  border: 1px solid #4d4d4d2f; 
+  border-radius: 50px;
+  background: linear-gradient(145deg, #33333363, #5050509f, #33333363); 
+  box-shadow: 1px 1px 24px #5c5c5cbb;
+  position: absolute; 
+  padding: 13px 20px;
+  top: 90px; 
+  right: 150px; 
+  opacity: 0;
+  visibility: hidden;
+  font-size: 18px; 
+  font-family: 'Unbound', sans-serif;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+}
+
+#notification:hover + .tooltip-base,
+#profile-btn:hover + .tooltip-base {
+  opacity: 1;
+  visibility: visible;
+  z-index: 1001;
 }
 
 .tooltip-prof{
@@ -387,7 +449,7 @@ h2{
 
 .stroke{
   display: flex; justify-content: space-evenly; align-items: center;
-  margin: 24px 60px; transition: all 0.3s ease; gap: 90px;
+  margin: 24px 60px; transition: all 0.3s ease; gap: 80px;
   font-size: 19px; font-family: 'Unbound';
   border: 1px solid #5f5f5fb6; border-radius: 50px;
   background-color: #333333; 
@@ -558,40 +620,45 @@ footer{
 }
 
 .analytics-content {
-  background: #0b1120;
+  background: #191919;
   padding: 24px;
   border-radius: 16px;
   max-width: 800px;
   width: 95%;
   max-height: 90vh;
   overflow-y: auto;
+  font-family: "unbounded";
 }
-
 .analytics-switcher {
   display: flex;
   gap: 8px;
   margin-bottom: 20px;
 }
 
+#analytics-chart {
+  width: 100% !important;
+  max-width: 800px;
+}
+
 .view-btn {
   flex: 1;
   padding: 12px;
-  background: #1e293b;
+  background: #4e5258 ;
   color: #cbd5e1;
-  border: 1px solid #334155;
+  border: 1px solid #383c41;
   border-radius: 8px;
   cursor: pointer;
 }
 
 .view-btn.active {
-  background: #3b82f6;
+  background: #212122;
   color: white;
 }
 
 .close-btn {
   width: 100%;
   padding: 12px;
-  background: #64748b;
+  background: #2a2a2b;
   color: white;
   border: none;
   border-radius: 8px;
@@ -729,3 +796,100 @@ header{
   }
 }
 
+/* для редакта */
+.inline-edit-input {
+    background: transparent;
+    border: 1px solid #555;
+    color: #fff;
+    width: 100%;
+    font-size: inherit;
+    font-family: inherit;
+    border-radius: 4px;
+}
+.delete-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 24px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+.controls { display: flex; align-items: center; position: absolute; right: 10px; gap: 1px;}
+
+
+/* для кликера использований */
+.add-usage-btn {
+    position: relative;
+    overflow: visible;
+    cursor: pointer;
+
+    background: none;
+    color: rgba(175, 173, 173, 0.92);
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.usage-badge {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #f59e0b;
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 1000;
+    pointer-events: none;
+    animation: floatUp 1.8s ease-out forwards;
+    white-space: nowrap;
+}
+
+@keyframes floatUp {
+    0% { opacity: 0; transform: translate(-50%, 10px); }
+    30% { opacity: 1; transform: translate(-50%, -10px); }
+    100% { opacity: 0; transform: translate(-50%, -40px); }
+}
+
+/* аналитика (хз не буду в старые теги вникать, если чо поверх тупо наложу)*/
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.stat-card {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  border-color: #f59e0b;
+}
+
+.stat-card h3 {
+  margin: 0;
+  color: #f59e0b; /* Твой акцентный цвет */
+  font-size: 24px;
+}
+
+.stat-card p {
+  margin: 5px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-card.highlight {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+}
