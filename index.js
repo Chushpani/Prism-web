@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5001/api';
+const API_URL = 'https://api.prism-sub.ru/api';
 const loginOverlay = document.getElementById('login-overlay');
   const registerOverlay = document.getElementById('register-overlay');
   const loginForm = document.getElementById('login-form');
@@ -182,26 +182,30 @@ registerForm.addEventListener('submit', async (e) => {
 
         if (response.ok) {
             profile = email;
-            // Сетим имейл в профиль (проверь ID, Каменидзе там что-то про #name писал)
+            
+            // Обновляем имя в профиле
             const nameEl = document.getElementById('name');
-            if (nameEl) nameEl.innerHTML = profile;
+            if (nameEl) nameEl.textContent = profile;
 
+            // Закрываем модалку
             registerOverlay.style.display = 'none';
             document.documentElement.style.overflow = 'auto';
             document.body.style.overflow = 'auto';
 
-            // Если пришло сообщение об успехе — тянем подписки
-            fetchSubscriptions(email); 
-            
+            // Вместо лишнего запроса fetchSubscriptions, 
+            // давай просто скажем пользователю об успехе
             alert(`Успешно! Найдено подписок: ${result.found || 0}`);
+            
+            // А теперь тянем актуальный список, чтобы отрисовать карточки
+            fetchSubscriptions(email); 
         } else {
-            // Выводим ошибку из твоего Flask (User already exists и т.д.)
-            alert(`Ошибка: ${result.error || 'Что-то пошло не так'}`);
+            // ТУТ ВАЖНО: берем result.message, а не result.error
+            alert(`Ошибка: ${result.message || 'Этот email уже занят или данные неверны'}`);
         }
-    } catch (err) {
+    } catch (err) { // <--- ВОТ ЭТОЙ СКОБКИ И CATCH НЕ ХВАТАЕТ
         console.error("Ошибка при регистрации:", err);
         alert("Бэкенд прилёг отдохнуть. Проверь консоль.");
-    }
+    } // <--- ЭТА ЗАКРЫВАЕТ TRY/CATCH
 });
 
 loginForm.addEventListener('submit', async (e) => {
