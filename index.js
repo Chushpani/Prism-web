@@ -141,7 +141,7 @@ document.getElementById('notification').addEventListener('click', () => {
     }
 
     if (pendingNotifications.length === 0) {
-        alert("Уведомлений нет, всё четко!");
+        alert("Уведомлений нет!");
         return;
     }
 
@@ -159,17 +159,20 @@ document.getElementById('notification').addEventListener('click', () => {
 registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Достаем данные через name — так надежнее
     const email = registerForm.email.value;
     const password = registerForm.password.value;
     const confirmPassword = registerForm['confirm-password'].value;
-    const imap_password = registerForm['app-password'].value; // Берем из name="app-password"
+    const imap_password = registerForm['app-password'].value;
 
-    // Проверка совпадения паролей (фронтовая база)
     if (password !== confirmPassword) {
         alert('Пароли не совпадают!');
         return;
     }
+
+    // --- ВКЛЮЧАЕМ ЛОАДЕР ---
+    registerForm.style.display = 'none'; // Прячем форму
+    const loader = document.getElementById('register-loader');
+    if (loader) loader.style.display = 'block'; // Показываем спиннер
 
     try {
         const response = await fetch(`${API_URL}/register`, {
@@ -181,31 +184,30 @@ registerForm.addEventListener('submit', async (e) => {
         const result = await response.json();
 
         if (response.ok) {
+            // Успех — всё закрываем
             profile = email;
-            
-            // Обновляем имя в профиле
             const nameEl = document.getElementById('name');
             if (nameEl) nameEl.textContent = profile;
 
-            // Закрываем модалку
             registerOverlay.style.display = 'none';
             document.documentElement.style.overflow = 'auto';
             document.body.style.overflow = 'auto';
 
-            // Вместо лишнего запроса fetchSubscriptions, 
-            // давай просто скажем пользователю об успехе
             alert(`Успешно! Найдено подписок: ${result.found || 0}`);
-            
-            // А теперь тянем актуальный список, чтобы отрисовать карточки
             fetchSubscriptions(email); 
         } else {
-            // ТУТ ВАЖНО: берем result.message, а не result.error
-            alert(`Ошибка: ${result.message || 'Этот email уже занят или данные неверны'}`);
+            // Ошибка — возвращаем форму на место
+            alert(`Ошибка: ${result.message || 'Этот email уже занят'}`);
+            registerForm.style.display = 'block';
+            if (loader) loader.style.display = 'none';
         }
-    } catch (err) { // <--- ВОТ ЭТОЙ СКОБКИ И CATCH НЕ ХВАТАЕТ
+    } catch (err) {
         console.error("Ошибка при регистрации:", err);
-        alert("Бэкенд прилёг отдохнуть. Проверь консоль.");
-    } // <--- ЭТА ЗАКРЫВАЕТ TRY/CATCH
+        alert("Бэкенд прилёг отдохнуть.");
+        // Возвращаем форму в случае падения сети
+        registerForm.style.display = 'block';
+        if (loader) loader.style.display = 'none';
+    }
 });
 
 loginForm.addEventListener('submit', async (e) => {

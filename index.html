@@ -127,14 +127,22 @@
       <input type="password" name="password" placeholder="Пароль" required minlength="6" />
       <input type="password" name="confirm-password" placeholder="Подтверждение пароля" required />
       <input type="password" name="app-password" placeholder="Пароль доступа приложений" required />
+      <p class="instruct">Не знаете где найти пароль?<a href="https://docs.google.com/document/d/1_uoe4-5NIBfyk0Wr2oznbTD7Cuss2yBpOgdjkZErf1c/edit?usp=sharing" target="_blank"> инструкция</a></p>
       <button type="submit">Подтвердить</button>
     </form>
     <button type="button" id="back-to-login">Уже есть аккаунт?<br> Войти</button>
   </div>
+    <div id="register-loader" style="display: none; text-align: center; padding: 20px;">
+      <div class="spinner"></div>
+      <p style="margin-top: 15px; color: #fff; font-family: unbounded;">Проверяем вашу почту... <br><small>Это может занять до 30 секунд</small></p>
+    </div>
 </div>
 
 
-<footer>2026©</footer>
+<footer>
+  <a href="https://github.com/Chushpani" target="_blank">github</a>
+  <p>2026©</p>
+</footer>
 
     <script src="index.js"></script>
 </body>
