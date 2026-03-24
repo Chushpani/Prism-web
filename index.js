@@ -225,33 +225,30 @@ loginForm.addEventListener('submit', async (e) => {
 
         const result = await response.json();
 
-        if (response.ok && result.status === "success") {
-            // 1. Сохраняем почту в профиль
+    if (response.ok && result.status === "success") {
+            localStorage.setItem('userEmail', result.user_email); 
+            
             profile = result.user_email;
             currentSubs = result.subscriptions;
+            
             const nameEl = document.getElementById('name');
             if (nameEl) nameEl.innerHTML = profile;
 
-            // 2. Скрываем модалку и разрешаем скролл
             loginOverlay.style.display = 'none';
             document.documentElement.style.overflow = 'auto';
             document.body.style.overflow = 'auto';
 
-            // 3. СРАЗУ отрисовываем подписки, которые вернул бэкенд
             renderSubscriptions(result.subscriptions);
-            
-            // 4. Запускаем "умное" уведомление
             checkUpcomingPayments(result.subscriptions);
             
             console.log("Вход выполнен успешно!");
         } else {
-            // Выводим ошибку из твоего Flask (Неверный логин или пароль)
-            alert(result.message || "Ошибка входа");
+            alert(result.message || "Ошибка: Неверный логин или пароль");
         }
-    } catch (err) {
-        console.error("Ошибка при логине:", err);
-        alert("Не удалось достучаться до сервера Prism.");
-    }
+    } catch (err) { // <--- ВОТ ЭТОГО НЕ ХВАТАЛО
+        console.error("Ошибка сети:", err);
+        alert("Бэкенд Prism не отвечает. Проверь консоль.");
+    } // <--- И ЭТОЙ СКОБКИ ТОЖЕ
 });
 
 // обновление и доп подсинхрон
@@ -462,21 +459,7 @@ function showUsageBadge(element, totalClicks) {
   });
 
   // Логин: закрываем только после успешной валидации
-  loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (loginForm.checkValidity()) {
-      profile = loginForm.querySelector('input[type="email"]').value;
-      document.getElementById('name').innerHTML = profile;
-      // fetch('/api/login', { method: 'POST', body: new FormData(loginForm) })
-      // .then(() => { /* токен получен */ })
-      
-      loginOverlay.style.display = 'none';  // закрываем
-      document.documentElement.style.overflow = 'auto';
-      document.body.style.overflow = 'auto';
-    } else {
-      loginForm.reportValidity();
-    }
-  });
+
 
   // Регистрация: проверяем совпадение паролей + валидация
   registerForm.addEventListener('submit', (e) => {
