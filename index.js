@@ -185,6 +185,7 @@ registerForm.addEventListener('submit', async (e) => {
 
         if (response.ok) {
             // Успех — всё закрываем
+            localStorage.setItem('userEmail', email);
             profile = email;
             const nameEl = document.getElementById('name');
             if (nameEl) nameEl.textContent = profile;
@@ -250,6 +251,19 @@ loginForm.addEventListener('submit', async (e) => {
         alert("Бэкенд Prism не отвечает. Проверь консоль.");
     } // <--- И ЭТОЙ СКОБКИ ТОЖЕ
 });
+
+const switcher = document.querySelector('.analytics-switcher');
+if (switcher) {
+    switcher.addEventListener('click', (e) => {
+        if (e.target.classList.contains('view-btn')) {
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            const view = e.target.getAttribute('data-view');
+            renderAnalytics(view, currentSubs);
+        }
+    });
+}
 
 // обновление и доп подсинхрон
 async function syncSubscriptions(email) {
@@ -595,6 +609,52 @@ function getSubscriptions() {
   return subs;
 }
 
+async function changeSubCategory(subId, newCat) {
+  console.log(`Меняем подписку ${subId} на категорию ${newCat}`); // Для отладки
+
+  if (newCat === "NEW_CAT") {
+    newCat = prompt("Введите название новой категории:");
+    if (!newCat || newCat.trim() === "") {
+        // Если юзер передумал, возвращаем селект в исходное состояние
+        renderAnalytics('category', currentSubs);
+        return;
+    }
+  }
+
+  // 1. Ищем подписку в нашем глобальном массиве
+  const sub = currentSubs.find(s => String(s.id) === String(subId));
+  
+  if (sub) {
+    const oldCat = sub.category;
+    sub.category = newCat; // Меняем категорию в памяти
+
+    // Решаем: остаться в текущей категории или прыгнуть в новую?
+    // Давай останемся в текущей, чтобы юзер видел, как подписка «исчезла»
+    if (window.currentActiveCat === oldCat && !currentSubs.some(s => s.category === oldCat)) {
+        // Если в старой категории больше ничего нет — прыгаем в новую
+        window.currentActiveCat = newCat;
+    }
+
+    // Мгновенно перерисовываем
+    renderAnalytics('category', currentSubs);
+  }
+
+  // 2. Стучимся на бэкенд (PATCH)
+  try {
+    const response = await fetch(`${API_URL}/subscriptions/${subId}/category`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: newCat })
+    });
+
+    if (!response.ok) throw new Error("Ошибка сервера");
+    console.log("Бэкенд подтвердил смену категории");
+  } catch (err) {
+    console.error("Сервер не ответил, но в интерфейсе мы поменяли:", err);
+    // Опционально: можно откатить изменения назад, если бэкенд упал
+  }
+}
+
 function renderAnalytics(view, subs) {
   const chartContainer = document.getElementById('chart-container');
   const statsContainer = document.getElementById('summary-stats');
@@ -668,6 +728,60 @@ subs.forEach(sub => {
     title = 'Сравнение месяцев (₽)';
   }
 
+  // --- 1. ЛОГИКА ВКЛАДКИ КАТЕГОРИЙ ---
+  if (view === 'category') {
+    // Группируем подписки по категориям
+    const categories = {};
+    subs.forEach(sub => {
+      const cat = sub.category || 'Без категории';
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(sub);
+    });
+
+    const catList = Object.keys(categories);
+    // Берем первую категорию как активную, если еще не выбрана
+    if (!window.currentActiveCat) window.currentActiveCat = catList[0];
+
+    // Генерим HTML для двух колонок
+    let categoryHTML = `
+      <div class="category-layout" style="display: flex; gap: 20px; color: white; min-height: 300px; text-align: left;">
+        <div class="category-sidebar" style="width: 150px; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 10px;">
+          ${catList.map(cat => `
+            <div class="cat-tab ${window.currentActiveCat === cat ? 'active-cat' : ''}" 
+                 onclick="window.currentActiveCat='${cat}'; renderAnalytics('category', currentSubs)"
+                 style="padding: 10px; cursor: pointer; border-radius: 6px; margin-bottom: 5px; font-size: 13px; 
+                        background: ${window.currentActiveCat === cat ? 'rgba(255,255,255,0.1)' : 'transparent'}">
+              ${cat} (${categories[cat].length})
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="category-main" style="flex: 1;">
+          <h4 style="margin-top: 0;">Подписки: ${window.currentActiveCat}</h4>
+          <div class="cat-subs-list">
+            ${categories[window.currentActiveCat].map(sub => `
+              <div class="cat-sub-item" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; margin-bottom: 8px; border-radius: 8px;">
+                <span>${sub.service_name} (${sub.price}₽)</span>
+                
+                <select onchange="changeSubCategory('${sub.id}', this.value)" style="background: #1e1e1e; color: white; border: 1px solid #444; border-radius: 4px; font-size: 12px; padding: 2px;">
+                   ${catList.map(c => `<option value="${c}" ${c === window.currentActiveCat ? 'selected' : ''}>${c}</option>`).join('')}
+                   <option value="NEW_CAT">+ Своя...</option>
+                </select>
+              </div>
+            `).join('')}
+          </div>
+          <p style="color: #94a3b8; font-size: 14px;">Итого по категории: <b>${categories[window.currentActiveCat].reduce((sum, s) => sum + Number(s.price), 0)} ₽</b></p>
+        </div>
+      </div>
+    `;
+
+    chartContainer.innerHTML = categoryHTML;
+    statsContainer.innerHTML = ""; // Очищаем низ, чтобы не мешался
+    return; // Выходим, так как нам тут график не нужен
+  }
+window.changeSubCategory = changeSubCategory;
+window.renderAnalytics = renderAnalytics;
+
   chartContainer.innerHTML = `<canvas id="analytics-chart" width="600" height="250"></canvas>`;
   drawBarChart(document.getElementById('analytics-chart'), Object.entries(data), title);
 
@@ -684,13 +798,13 @@ subs.forEach(sub => {
     const cost = clicks > 0 ? Math.round(price / clicks) : price;
 
     cardsHTML += `
-      <div class="stat-card" style="border-left: 4px solid #10b981; background: rgba(255,255,255,0.03); padding: 12px;">
+      <div class="stat-card" style="border-left: 4px solid #d8d8d8; background: rgba(255,255,255,0.03); padding: 12px;">
         <h4 style="margin: 0; font-size: 13px; color: #94a3b8;">${sub.service_name}</h4>
         <div style="margin-top: 8px;">
           <span style="font-size: 18px; font-weight: bold; color: white;">${cost} ₽</span>
           <span style="font-size: 11px; color: #64748b;"> / исп</span>
         </div>
-        <p style="margin: 4px 0 0 0; font-size: 11px; color: #10b981;">Использований: ${clicks}</p>
+        <p style="margin: 4px 0 0 0; font-size: 11px; color: #d8d8d8;">Использований: ${clicks}</p>
       </div>
     `;
   });
@@ -733,10 +847,13 @@ function drawBarChart(canvas, data, title) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     
-    // 1. НАСТРОЙКА ЧЕТКОСТИ (прямо здесь, чтобы не плодить функции)
+    // 1. ДИНАМИЧЕСКИЙ РАЗМЕР
+    const parent = canvas.parentElement;
     const dpr = window.devicePixelRatio || 1;
-    const vWidth = 700;  // Желаемая ширина в CSS пикселях
-    const vHeight = 300; // Желаемая высота
+    
+    // Берем ширину родителя, но не больше 700
+    const vWidth = Math.min(parent.clientWidth - 20, 700); 
+    const vHeight = 300; 
     
     canvas.style.width = vWidth + 'px';
     canvas.style.height = vHeight + 'px';
@@ -748,19 +865,19 @@ function drawBarChart(canvas, data, title) {
     // 2. ОЧИСТКА И ФОН
     ctx.clearRect(0, 0, vWidth, vHeight);
     ctx.fillStyle = '#28292c';
-    
-    // Рисуем скругленный прямоугольник
     ctx.beginPath();
     ctx.roundRect(0, 0, vWidth, vHeight, 16);
     ctx.fill();
 
     if (!data || data.length === 0) return;
 
-    // 3. ПАРАМЕТРЫ СТОЛБИКОВ
-    const barWidth = 45;
-    const spacing = 120;
-    const paddingX = 80;
-    const maxValue = Math.max(...data.map(d => d[1])) || 1;
+    // 3. РАСЧЕТЫ (Тут была ошибка)
+    const maxValue = Math.max(...data.map(d => d[1])) || 1; // Возвращаем расчет максимума
+    const itemCount = data.length;
+    
+    // Распределяем место: делим ширину на количество элементов + 1 для отступов
+    const spacing = vWidth / (itemCount + 1);
+    const barWidth = Math.min(40, spacing * 0.7); // Столбик не шире 40px
 
     // 4. ЗАГОЛОВОК
     ctx.fillStyle = 'white';
@@ -771,7 +888,8 @@ function drawBarChart(canvas, data, title) {
     // 5. РИСУЕМ ДАННЫЕ
     data.forEach(([label, value], i) => {
         const barHeight = (value / maxValue) * 160;
-        const x = i * spacing + paddingX;
+        // Центрируем каждый столбик в его "секторе"
+        const x = (i + 1) * spacing - barWidth / 2;
         const y = vHeight - barHeight - 45;
 
         // Столбик с градиентом
@@ -784,15 +902,17 @@ function drawBarChart(canvas, data, title) {
         ctx.roundRect(x, y, barWidth, barHeight, [6, 6, 0, 0]);
         ctx.fill();
 
-        // Текст сверху
+        // Текст сверху (цена)
         ctx.fillStyle = 'white';
-        ctx.font = 'bold 13px sans-serif';
+        ctx.font = 'bold 12px sans-serif';
         ctx.fillText(`${Math.round(value)}₽`, x + barWidth/2, y - 10);
 
-        // Подпись снизу
+        // Подпись снизу (название)
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '12px sans-serif';
-        ctx.fillText(label.slice(0, 10), x + barWidth/2, vHeight - 15);
+        ctx.font = '11px sans-serif';
+        // Обрезаем длинные названия, чтобы не налезали друг на друга
+        const shortLabel = label.length > 8 ? label.slice(0, 7) + '..' : label;
+        ctx.fillText(shortLabel, x + barWidth/2, vHeight - 15);
     });
 }
 
@@ -847,8 +967,6 @@ document.addEventListener('click', (e) => {
 //ППЛФОН короче все базовое я сделал, не забудь пж про умное уведомление при скорейшем платеже
 //типа буквально if(дата конца подписки+1 = дата сегодняшняя)
 // {вылазит то же уведомление чо и выше ток с текстом по типу "завтра будет списание средств по "такойто" подписке"}
-
-
 
 
 
