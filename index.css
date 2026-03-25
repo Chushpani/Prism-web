@@ -200,7 +200,8 @@ h2{
 .prof-photo{
   display: flex; align-items: center; width: max-content;
   justify-self: end;
-  margin: 25px 140px; margin-left: 150px; padding-left: 15px;
+  padding: 7px 0;
+  margin: 20px 140px; margin-left: 150px; padding-left: 15px;
   border: 1px solid #3f3f3fb6; border-radius: 50px;
   background-color: #33333363;
   box-shadow: 1px 1px 24px #5c5c5cbb;
